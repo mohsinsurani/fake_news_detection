@@ -2,6 +2,7 @@ import sys
 import os
 import json
 import pandas as pd
+import numpy as np
 
 # path_dir = sys.path[0] + "/data/FakeNewsNet_Dataset/politifact_fake"
 
@@ -66,6 +67,10 @@ def process_politifact():
     dataset_directory = sys.path[0] + "/data/FakeNewsNet_Dataset/"
     news_dirs = get_immediate_subdirectories(dataset_directory)
     news_json_arr, tweets_arr, retweets_arr = process_data(dataset_directory, news_dirs)
+    np.save('news_json_arr.npy', news_json_arr)  # save
+    np.save('tweets_arr.npy', tweets_arr)  # save
+    np.save('retweets_arr.npy', retweets_arr)  # save
+
     df = pd.DataFrame(news_json_arr, columns=news_json_arr[0].keys())
     df.to_csv("news_dataset.csv", encoding='utf-8', index=False)
 
