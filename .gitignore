@@ -2,3 +2,7 @@
 *.json
 *.json
 *.json
+*.csv
+*.csv
+politifact_git.csv
+politifact.csv
