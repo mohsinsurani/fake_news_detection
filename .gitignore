@@ -8,3 +8,4 @@ politifact_git.csv
 politifact.csv
 *.pkl
 *.pkl
+*.png
