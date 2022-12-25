@@ -15,7 +15,8 @@ from time import sleep
 from random import random
 from multiprocessing import Process
 
-def construct_tweet_node_from_json(json_data):
+
+def construct_tweet_node_from_json(json_data, label=None):
     new_graph = json_graph.tree_graph(json_data)
     # item_temp = nx.DiGraph(new_graph).degree
 
@@ -24,23 +25,23 @@ def construct_tweet_node_from_json(json_data):
 
     root_node = [node for node, in_degree in itemps1 if in_degree == 0][0]
     node_id_obj_dict = dict()
-    dfs_node_construction_helper(root_node, new_graph, set(), node_id_obj_dict)
+    dfs_node_construction_helper(root_node, new_graph, set(), node_id_obj_dict, label)
     return node_id_obj_dict[root_node]
 
 
-def dfs_node_construction_helper(node_id, graph: nx.DiGraph, visited: set, node_id_obj_dict: dict):
+def dfs_node_construction_helper(node_id, graph: nx.DiGraph, visited: set, node_id_obj_dict: dict, label=None):
     if node_id in visited:
         return None
 
     visited.add(node_id)
 
-    tweet_node_obj = construct_tweet_node_from_nx_node(node_id, graph)
+    tweet_node_obj = construct_tweet_node_from_nx_node(node_id, graph, label)
 
     node_id_obj_dict[node_id] = tweet_node_obj
 
     for neighbor_node_id in graph.successors(node_id):
         if neighbor_node_id not in visited:
-            dfs_node_construction_helper(neighbor_node_id, graph, visited, node_id_obj_dict)
+            dfs_node_construction_helper(neighbor_node_id, graph, visited, node_id_obj_dict, label)
             add_node_object_edge(node_id, neighbor_node_id, node_id_obj_dict)
 
 
@@ -58,7 +59,7 @@ def add_node_object_edge(parent_node_id: int, child_node_id: int, node_id_obj_di
         parent_node.add_reply_child(child_node)
 
 
-def construct_tweet_node_from_nx_node(node_id, graph: nx.DiGraph):
+def construct_tweet_node_from_nx_node(node_id, graph: nx.DiGraph, target=None):
     tweet_node_model = tweet_node(tweet_id=graph.nodes[node_id]['tweet_id'],
                                   created_time=graph.nodes[node_id]['time'],
                                   node_type=graph.nodes[node_id]['type'],
@@ -68,37 +69,38 @@ def construct_tweet_node_from_nx_node(node_id, graph: nx.DiGraph):
                                   text=graph.nodes[node_id].get('tweet', None),
                                   news_title=graph.nodes[node_id].get('title', None),
                                   news_text=graph.nodes[node_id].get('text', None),
+                                  target=target,
                                   )
 
-    # if tweet_node_model.node_type == 1:
-    #     page_rank = nx.pagerank(graph, alpha=0.9)
-    #     page_rank_arr = np.mean(np.array(list(page_rank.values())))
-    #
-    #     close_centre = nx.closeness_centrality(graph, u=None, distance=None, wf_improved=True)
-    #     close_centre_arr = np.mean(np.array(list(close_centre.values())))
-    #
-    #     constraint = nx.constraint(graph, nodes=None)
-    #     constraint_arr = np.mean(np.array(np.nan_to_num(list(constraint.values()))))
-    #
-    #     edge_centre = nx.edge_betweenness_centrality(graph, k=None, normalized=True, weight=None, seed=None)
-    #     edge_centre_arr = np.mean(np.array(list(edge_centre.values())))
-    #
-    #     effective_size = nx.effective_size(graph, nodes=None)
-    #
-    #     effective_size_arr = np.mean(np.array(np.nan_to_num(list(effective_size.values()))))
-    #
-    #     strong_conn = nx.number_strongly_connected_components(graph)
-    #     attr_conn = nx.number_attracting_components(graph)
-    #     branch_weight = nx.tree.branching_weight(graph)
-    #
-    #     tweet_node_model.rank = page_rank_arr
-    #     tweet_node_model.close_centre = close_centre_arr
-    #     tweet_node_model.constraint = constraint_arr
-    #     tweet_node_model.edge_centre = edge_centre_arr
-    #     tweet_node_model.effective_size_score = effective_size_arr
-    #     tweet_node_model.strong_conn = strong_conn
-    #     tweet_node_model.attr_conn = attr_conn
-    #     tweet_node_model.branch_weight = branch_weight
+    if tweet_node_model.node_type == 1:
+        page_rank = nx.pagerank(graph, alpha=0.9)
+        page_rank_arr = np.mean(np.array(list(page_rank.values())))
+
+        close_centre = nx.closeness_centrality(graph, u=None, distance=None, wf_improved=True)
+        close_centre_arr = np.mean(np.array(list(close_centre.values())))
+
+        # constraint = nx.constraint(graph, nodes=None)
+        # constraint_arr = np.mean(np.array(np.nan_to_num(list(constraint.values()))))
+        #
+        edge_centre = nx.edge_betweenness_centrality(graph, k=None, normalized=True, weight=None, seed=None)
+        edge_centre_arr = np.mean(np.array(list(edge_centre.values())))
+        #
+        # effective_size = nx.effective_size(graph, nodes=None)
+
+        # effective_size_arr = np.mean(np.array(np.nan_to_num(list(effective_size.values()))))
+
+        strong_conn = nx.number_strongly_connected_components(graph)
+        attr_conn = nx.number_attracting_components(graph)
+        branch_weight = nx.tree.branching_weight(graph)
+
+        tweet_node_model.rank = page_rank_arr
+        tweet_node_model.close_centre = close_centre_arr
+        # tweet_node_model.constraint = constraint_arr
+        tweet_node_model.edge_centre = edge_centre_arr
+        # tweet_node_model.effective_size_score = effective_size_arr
+        tweet_node_model.strong_conn = strong_conn
+        tweet_node_model.attr_conn = attr_conn
+        tweet_node_model.branch_weight = branch_weight
 
     return tweet_node_model
 
@@ -122,35 +124,37 @@ def load_from_nx_graphs(dataset_dir: str, news_source: str, news_label: str):
     news_dataset_dir = "{}/{}_{}".format(dataset_dir, news_source, news_label)
     # sample_ids = get_dataset_sample_ids(news_source, news_label, "data/sample_ids")
     tweet_list = []
-    if news_source == "politifact":
-        dataset_dir = sys.path[4] + "/pickle/merged_tweet_df.pkl"
-        # df = pd.read_csv(dataset_dir + "politifact_prop.csv")
-        df = pickle.load(open(dataset_dir, "rb"))
-        if news_label == "fake":
-            tweet_list = df[df["target"] == 0]["tweet_mod"].tolist()
-        else:
-            tweet_list = df[df["target"] == 1]["tweet_mod"].tolist()
+    dataset_dir = sys.path[4] + "/csvs/" + news_source + "_prop.pkl"
+    # df = pd.read_csv(dataset_dir)
+    df = pickle.load(open(dataset_dir, "rb"))
+    if news_label == "fake":
+        tweet_list = df[df["target"] == 0]["tweet_mod"].tolist()
+    else:
+        tweet_list = df[df["target"] == 1]["tweet_mod"].tolist()
 
-    # processes = [Process(target=convert_to_tweet_node_obj(tweet_list[i]), args=(i,)) for i in range(len(tweet_list))]
-    for tweet in tweet_list:
-        # tweet_dict = tweet[0]
+    for tweet in tqdm(tweet_list):
         tweet_node_conv = convert_to_tweet_node_obj(tweet)
         tweet_node_objects.append(tweet_node_conv)
-
-    # for process in processes:
-    #     process.start()
-    # # wait for all processes to complete
-    # for process in processes:
-    #     process.join()
-    #     # report that all tasks are completed
-    # print('Done', flush=True)
 
     return tweet_node_objects
 
 
-def convert_to_tweet_node_obj(tweet):
+def load_from_nx_graphs_mix(news_source: str):
+    tweet_node_objects = []
+
+    dataset_dir = sys.path[4] + "/csvs/" + news_source + "_prop.pkl"
+    df = pickle.load(open(dataset_dir, "rb"))
+
+    for idx, tweet in tqdm(df.iterrows()):
+        tweet_node_conv = convert_to_tweet_node_obj(tweet["tweet_mod"], tweet["target"])
+        tweet_node_objects.append(tweet_node_conv)
+
+    return tweet_node_objects
+
+
+def convert_to_tweet_node_obj(tweet, label=None):
     tweet_dict = tweet[0]
-    tweet_node_obj = construct_tweet_node_from_json(tweet_dict)
+    tweet_node_obj = construct_tweet_node_from_json(tweet_dict, label)
     return tweet_node_obj
 
 
@@ -169,7 +173,7 @@ def load_networkx_graphs(dataset_dir: str, news_source: str, news_label: str):
 def load_networkx_graphs_from_df(dataset_dir: str, news_source: str, news_label: str):
     news_samples = []
 
-    df = pd.read_csv(dataset_dir + "politifact_prop.csv")
+    df = pd.read_csv(dataset_dir + news_source + "_prop.csv")
     tweets = []
 
     if news_label == "real":

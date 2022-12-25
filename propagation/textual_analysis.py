@@ -13,6 +13,7 @@ from urlextract import URLExtract
 nltk.download('punkt')
 
 sent_analyzer: SentimentIntensityAnalyzer = SentimentIntensityAnalyzer()
+extractor = URLExtract()
 
 
 def get_length_of_tweet(prop_graph: tweet_node):
@@ -49,7 +50,6 @@ def get_num_of_url(prop_graph: tweet_node):
             q.put(child)
             tweet = child.text
             if tweet is not None:
-                extractor = URLExtract()
                 urls = extractor.find_urls(tweet)
                 if len(urls) > 0:
                     num_url_arr.append(len(urls))
@@ -95,16 +95,19 @@ def get_emotion_of_tweet(prop_graph: tweet_node):
         for child in node.children:
             q.put(child)
             tweet = child.text
-            if tweet is not None:
-                emotion_dict = LeXmo.LeXmo(tweet)
-                emotion_dict.pop('text', None)
+            if tweet is not None and len(tweet) > 0:
+                try:
+                    emotion_dict = LeXmo.LeXmo(tweet)
+                    emotion_dict.pop('text', None)
+                except:
+                    print(tweet)
+                    emotion_dict = {'anger': 0.0, 'anticipation': 0.0, 'disgust': 0.0, 'fear': 0.0, 'joy': 0.0, 'negative': 0.0, 'positive': 0.0, 'sadness': 0.0, 'surprise': 0.0, 'trust': 0.0}
                 sent_arr.append(emotion_dict)
-                break
             else:
-                break
+                print(tweet)
 
     if len(sent_arr) == 0:
-        return 0
+        return [{'anger': 0.0, 'anticipation': 0.0, 'disgust': 0.0, 'fear': 0.0, 'joy': 0.0, 'negative': 0.0, 'positive': 0.0, 'sadness': 0.0, 'surprise': 0.0, 'trust': 0.0}]
     else:
         return get_average_from_dict_arrays(sent_arr)
 
@@ -122,7 +125,11 @@ def get_sentiment_of_tweet(prop_graph: tweet_node):
             q.put(child)
             tweet = child.text
             if tweet is not None:
-                sent_dict = sent_analyzer.polarity_scores(tweet)
+                try:
+                    sent_dict = sent_analyzer.polarity_scores(tweet)
+                except:
+                    sent_dict = {"neg": 0.0, "pos": 0.0, "neu": 0.0, "compound": 0.0}
+
                 sent_arr.append(sent_dict)
 
     if len(sent_arr) == 0:
@@ -175,8 +182,11 @@ def get_closeness_tweet_news(prop_graph: tweet_node):
                 q.put(child)
                 tweet = child.text
                 if tweet is not None and len(tweet) > 0:
-                    cosine_score = get_cosine_two_sentence(tweet, text_to_cons)
-                    sent_arr.append(cosine_score)
+                    try:
+                        cosine_score = get_cosine_two_sentence(tweet, text_to_cons)
+                        sent_arr.append(cosine_score)
+                    except:
+                        print("tweet, text_to_cons")
 
     if len(sent_arr) == 0:
         return 0
@@ -210,50 +220,6 @@ def get_cosine_two_sentence(x: str, y: str):
         c += l1[i] * l2[i]
     cosine = c / float((sum(l1) * sum(l2)) ** 0.5)
     return cosine
-
-
-def get_num_of_negative_words(prop_graph: tweet_node):
-    q = queue.Queue()
-
-    q.put(prop_graph)
-    sent_arr = []
-
-    while q.qsize() != 0:
-        node = q.get()
-
-        for child in node.children:
-            q.put(child)
-            tweet = child.text
-            if tweet is not None:
-                sent_dict = sent_analyzer.polarity_scores(tweet)
-                sent_arr.append(sent_dict["neg"])
-
-    if len(sent_arr) == 0:
-        return 0
-    else:
-        return np.mean(np.array(sent_arr))
-
-
-def get_num_of_positive_words(prop_graph: tweet_node):
-    q = queue.Queue()
-
-    q.put(prop_graph)
-    sent_arr = []
-
-    while q.qsize() != 0:
-        node = q.get()
-
-        for child in node.children:
-            q.put(child)
-            tweet = child.text
-            if tweet is not None:
-                sent_dict = sent_analyzer.polarity_scores(tweet)
-                sent_arr.append(sent_dict["pos"])
-
-    if len(sent_arr) == 0:
-        return 0
-    else:
-        return np.mean(np.array(sent_arr))
 
 
 def get_num_of_person_mentions(prop_graph: tweet_node):
@@ -305,8 +271,6 @@ def get_all_textual_features(prop_graphs, micro_features, macro_features):
                                 get_num_of_url,
                                 get_closeness_tweet_news,
                                 get_num_of_hashtags,
-                                # get_num_of_positive_words,
-                                # get_num_of_negative_words,
                                 get_sentiment_of_tweet,
                                 get_num_of_person_mentions
                                 ]
@@ -345,8 +309,6 @@ class TextualFeatureHelper(BaseFeatureHelper):
                        get_num_of_url,
                        get_closeness_tweet_news,
                        get_num_of_hashtags,
-                       # get_num_of_positive_words,
-                       # get_num_of_negative_words,
                        get_sentiment_of_tweet,
                        get_num_of_person_mentions
                        ]
@@ -368,8 +330,6 @@ class TextualFeatureHelper(BaseFeatureHelper):
                          "Count of the URL",
                          "Closeness of the tweet with the news title in macro network",
                          "Number of hash tags in tweet in macro network",
-                         # "Score of positive in tweet in macro network",
-                         # "Score of negative in tweet in macro network",
                          "Neg Sentiment score of the tweet in macro network",
                          "Neu Sentiment score of the tweet in macro network",
                          "Pos Sentiment score of the tweet in macro network",
@@ -382,5 +342,5 @@ class TextualFeatureHelper(BaseFeatureHelper):
     def get_macro_feature_short_names(self):
         feature_names = []
         for fea in range(len(self.get_macro_feature_method_names())):
-            feature_names.append("Tex" + str(fea))
+            feature_names.append("Sen" + str(fea + 1))
         return feature_names

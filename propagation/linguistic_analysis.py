@@ -138,7 +138,9 @@ def get_reply_nodes_sentiment_ratio(prop_graph: tweet_node):
         positive_sentiment = 1
         negative_sentiment = 1
         for value in reply_diff_values:
-            if value > 0.05:
+            if value is None:
+                return 0
+            elif value > 0.05:
                 positive_sentiment += 1
             elif value < -0.05:
                 negative_sentiment += 1

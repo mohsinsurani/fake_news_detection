@@ -44,6 +44,8 @@ class BaseFeatureHelper(metaclass=ABCMeta):
         pass
 
     def get_dump_file_name(self, news_source, micro_features, macro_features, label, file_dir):
+        if label is None:
+            label = "global"
         file_tags = [news_source, label, self.get_feature_group_name()]
         if micro_features:
             file_tags.append("micro")
@@ -85,7 +87,10 @@ class BaseFeatureHelper(metaclass=ABCMeta):
 
             if isinstance(features_set[0], dict):
                 for feature in features_set:
-                    feature_arr = list(feature.values())
+                    if isinstance(feature, int):
+                        feature_arr = list({'anger': 0.0, 'anticipation': 0.0, 'disgust': 0.0, 'fear': 0.0, 'joy': 0.0, 'negative': 0.0, 'positive': 0.0, 'sadness': 0.0, 'surprise': 0.0, 'trust': 0.0})
+                    else:
+                        feature_arr = list(feature.values())
                     for index, item in enumerate(feature_arr):
                         if last_index_visit + index < len(all_features):
                             all_features[last_index_visit + index].append(item)

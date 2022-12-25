@@ -9,101 +9,33 @@ def get_page_rank(prop_graph: tweet_node):
     q = queue.Queue()
 
     q.put(prop_graph)
-    len_tweet_arr = []
+    page_arr = []
 
     while q.qsize() != 0:
         node = q.get()
+        if node.rank > 0:
+            page_arr.append(node.rank)
 
-        for child in node.children:
-            q.put(child)
-            tweet = child.text
-            if tweet is not None and len(tweet) > 0:
-                len_tweet_arr.append(len(tweet))
-
-    if len(len_tweet_arr) == 0:
+    if len(page_arr) == 0:
         return 0
     else:
-        return np.mean(np.array(len_tweet_arr))
-
-
-def get_effectiveness_size(prop_graph: tweet_node):
-    q = queue.Queue()
-
-    q.put(prop_graph)
-    num_url_arr = []
-
-    while q.qsize() != 0:
-        node = q.get()
-
-        for child in node.children:
-            q.put(child)
-            tweet = child.text
-            if tweet is not None:
-                num_url_arr.append({})
-
-    if len(num_url_arr) == 0:
-        return 0
-    else:
-        return np.mean(np.array(num_url_arr))
+        return np.mean(np.array(page_arr))
 
 
 def get_closeness(prop_graph: tweet_node):
     q = queue.Queue()
 
     q.put(prop_graph)
-    num_hastags_arr = []
+    num_close_arr = []
 
     while q.qsize() != 0:
         node = q.get()
+        num_close_arr.append(node.close_centre)
 
-        for child in node.children:
-            q.put(child)
-            tweet = child.text
-            if tweet is not None:
-                tags = {tag.strip("#") for tag in tweet.split() if tag.startswith("#")}
-                if len(tags) > 0:
-                    num_hastags_arr.append(len(tags))
-
-    if len(num_hastags_arr) == 0:
+    if len(num_close_arr) == 0:
         return 0
     else:
-        return np.mean(np.array(num_hastags_arr))
-
-
-def get_eigen_centre(prop_graph: tweet_node):
-    q = queue.Queue()
-
-    q.put(prop_graph)
-    sent_arr = []
-
-    while q.qsize() != 0:
-        node = q.get()
-
-        for child in node.children:
-            q.put(child)
-            tweet = child.text
-            if tweet is not None:
-                sent_arr.append({})
-                break
-            else:
-                break
-
-    if len(sent_arr) == 0:
-        return 0
-    else:
-        emo_attr_dict = dict.fromkeys(sent_arr[0].keys(), [])
-
-        for sent in sent_arr:
-            for key, value in sent.items():
-                arr_val = emo_attr_dict[key].copy()
-                arr_val.append(value)
-                emo_attr_dict[key] = arr_val
-
-        averages = [(k, sum(v) / len(v)) for k, v in emo_attr_dict.items()]
-        emo_mean_dict = {}
-        for k, v in averages:
-            emo_mean_dict[k] = v
-        return emo_mean_dict
+        return np.mean(np.array(num_close_arr))
 
 
 def get_edge_centre(prop_graph: tweet_node):
@@ -114,12 +46,7 @@ def get_edge_centre(prop_graph: tweet_node):
 
     while q.qsize() != 0:
         node = q.get()
-
-        for child in node.children:
-            q.put(child)
-            tweet = child.text
-            if tweet is not None:
-                sent_arr.append({})
+        sent_arr.append(node.edge_centre)
 
     if len(sent_arr) == 0:
         return 0
@@ -135,27 +62,8 @@ def get_strong_conn(prop_graph: tweet_node):
 
     while q.qsize() != 0:
         node = q.get()
-        news_title = node.news_title
-        news_text = node.news_text
-        text_to_cons = None
-        try:
-            if news_title is not None and len(news_title) > 0:
-                text_to_cons = news_title
-            elif news_text is not None and len(news_text) > 0:
-                text_to_cons = news_text
-        except:
-            print(news_title)
-            print("/////////////")
-            print(news_text)
-            if news_text is not None and len(news_text) > 0:
-                text_to_cons = news_text
-
-        if text_to_cons is not None and len(text_to_cons) > 0:
-            for child in node.children:
-                q.put(child)
-                tweet = child.text
-                if tweet is not None and len(tweet) > 0:
-                    sent_arr.append({})
+        if node.strong_conn > 0:
+            sent_arr.append(node.strong_conn)
 
     if len(sent_arr) == 0:
         return 0
@@ -171,12 +79,8 @@ def get_attr_conn(prop_graph: tweet_node):
 
     while q.qsize() != 0:
         node = q.get()
-
-        for child in node.children:
-            q.put(child)
-            tweet = child.text
-            if tweet is not None:
-                sent_arr.append({})
+        if node.attr_conn > 0:
+            sent_arr.append(node.attr_conn)
 
     if len(sent_arr) == 0:
         return 0
@@ -192,13 +96,8 @@ def get_branch_weight(prop_graph: tweet_node):
 
     while q.qsize() != 0:
         node = q.get()
-
-        for child in node.children:
-            q.put(child)
-            tweet = child.text
-            if tweet is not None:
-                sent_dict = []
-                sent_arr.append(sent_dict)
+        if node.branch_weight > 0:
+            sent_arr.append(node.branch_weight)
 
     if len(sent_arr) == 0:
         return 0
@@ -233,8 +132,6 @@ def get_all_textual_features(prop_graphs, micro_features, macro_features):
                                 get_strong_conn,
                                 get_edge_centre,
                                 get_branch_weight,
-                                get_effectiveness_size,
-                                get_eigen_centre,
                                 ]
 
     function_refs = []
@@ -263,7 +160,7 @@ class GraphicalFeatureHelper(BaseFeatureHelper):
         return []
 
     def get_feature_group_name(self):
-        return "tex"
+        return "gr"
 
     def get_macro_feature_method_references(self):
         method_refs = [get_page_rank,
@@ -272,22 +169,17 @@ class GraphicalFeatureHelper(BaseFeatureHelper):
                        get_strong_conn,
                        get_edge_centre,
                        get_branch_weight,
-                       get_effectiveness_size,
-                       get_eigen_centre,
                        ]
 
         return method_refs
 
     def get_macro_feature_method_names(self):
-        feature_names = ["Length of the tweet",
-                         "Count of the URL",
-                         "Emotion behind the tweet",
-                         "Closeness of the tweet with the news title in macro network",
-                         "Number of hash tags in tweet in macro network",
-                         "Score of positive in tweet in macro network",
-                         "Score of negative in tweet in macro network",
-                         "Sentiment score of the tweet in macro network",
-                         "Number of people mentioned in macro network"
+        feature_names = ["Average Page Rank",
+                         "Average Closeness of the Graph",
+                         "Average Attractive Components of the graph",
+                         "Average Strong Connections of the Graph",
+                         "Average Edge Centre of the Graph",
+                         "Average Branch Weight of the Graph",
                          ]
 
         return feature_names
@@ -295,5 +187,5 @@ class GraphicalFeatureHelper(BaseFeatureHelper):
     def get_macro_feature_short_names(self):
         feature_names = []
         for fea in range(len(self.get_macro_feature_method_names())):
-            feature_names.append("G" + str(fea))
+            feature_names.append("G" + str(fea+1))
         return feature_names
